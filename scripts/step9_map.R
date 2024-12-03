@@ -45,7 +45,7 @@ librarian::shelf(tidyverse, readr, janitor, zoo,
 theme_set(theme_minimal())
 
 ### set up google map key ---
-api_secret <- 'AIzaSyB_Q-Ow1klpX9jblm7M2614k5KCVYUXTZM'
+api_secret <- 'XXX'
 register_google(key = api_secret)
 has_google_key()
 
