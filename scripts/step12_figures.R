@@ -72,9 +72,7 @@ ann_dt |>
             strip.background = element_blank(),
             strip.text = element_text(face = "bold", size = 12, color = "black"))
 
-ggsave("output/ms-second-round/plots/sbc-timeseries.tiff", units = "in", width = 5,
-       height = 5, dpi =  600, compression = "lzw")
-ggsave("output/ms-second-round/plots/sbc-timeseries.svg", units = "in", width = 5,
+ggsave("output/figs/map_insets/sbc-timeseries.png", units = "in", width = 5,
        height = 5, dpi =  600)
 
 ann_dt |> 
@@ -99,9 +97,7 @@ ann_dt |>
             strip.background = element_blank(),
             strip.text = element_text(face = "bold", size = 12, color = "black"))
 
-ggsave("output/ms-second-round/plots/mcr-timeseries.tiff", units = "in", width = 5,
-       height = 5, dpi =  600, compression = "lzw")
-ggsave("output/ms-second-round/plots/mcr-timeseries.svg", units = "in", width = 5,
+ggsave("output/figs/map_insets/mcr-timeseries.png", units = "in", width = 5,
        height = 5, dpi =  600)
 
 ann_dt |> 
@@ -126,9 +122,7 @@ ann_dt |>
             strip.background = element_blank(),
             strip.text = element_text(face = "bold", size = 12, color = "black"))
 
-ggsave("output/ms-second-round/plots/vcr-timeseries.tiff", units = "in", width = 5,
-       height = 5, dpi =  600, compression = "lzw")
-ggsave("output/ms-second-round/plots/vcr-timeseries.svg", units = "in", width = 5,
+ggsave("output/figs/map_insets/vcr-timeseries.png", units = "in", width = 5,
        height = 5, dpi =  600)
 
 ann_dt|> 
@@ -153,9 +147,7 @@ ann_dt|>
             strip.background = element_blank(),
             strip.text = element_text(face = "bold", size = 12, color = "black"))
 
-ggsave("output/ms-second-round/plots/fce-timeseries.tiff", units = "in", width = 5,
-       height = 5, dpi =  600, compression = "lzw")
-ggsave("output/ms-second-round/plots/fce-timeseries.svg", units = "in", width = 5,
+ggsave("output/figs/map_insets/fce-timeseries.png", units = "in", width = 5,
        height = 5, dpi =  600)
 
 ann_dt |> 
@@ -180,9 +172,7 @@ ann_dt |>
             strip.background = element_blank(),
             strip.text = element_text(face = "bold", size = 12, color = "black"))
 
-ggsave("output/ms-second-round/plots/pccc-timeseries.tiff", units = "in", width = 5,
-       height = 5, dpi =  600, compression = "lzw")
-ggsave("output/ms-second-round/plots/pccc-timeseries.svg", units = "in", width = 5,
+ggsave("output/figs/map_insets/pccc-timeseries.png", units = "in", width = 5,
        height = 5, dpi =  600)
 
 ann_dt |> 
@@ -207,9 +197,7 @@ ann_dt |>
             strip.background = element_blank(),
             strip.text = element_text(face = "bold", size = 12, color = "black"))
 
-ggsave("output/ms-second-round/plots/pccs-timeseries.tiff", units = "in", width = 5,
-       height = 5, dpi =  600, compression = "lzw")
-ggsave("output/ms-second-round/plots/pccs-timeseries.svg", units = "in", width = 5,
+ggsave("output/figs/map_insets/pccs-timeseries.png", units = "in", width = 5,
        height = 5, dpi =  600)
 
 # density plots -----------------------------------------------------------
