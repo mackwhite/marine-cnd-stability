@@ -65,7 +65,7 @@ a <- all |>
       geom_point(aes(color = Program), size = 2) +  # Adds the scatter plot points
       geom_smooth(method = "lm", size = 2, color = "black", linetype = "solid", se = FALSE) +
       # geom_smooth(method = "lm", se = FALSE) +  # Adds linear model lines for each program
-      labs(x = "Years",
+      labs(x = "Period of Record (years)",
            y = "CND Stability") +
       theme_classic() +
       annotate('text',
@@ -93,7 +93,7 @@ b <- all |>
       geom_point(aes(color = Program), size = 2) +  # Adds the scatter plot points
       geom_smooth(method = "lm", size = 2, color = "black", linetype = "solid", se = FALSE) +
       # geom_smooth(method = "lm", se = FALSE) +  # Adds linear model lines for each program
-      labs(x = "Years",
+      labs(x = "Period of Record (years)",
            y = "CND Stability") +
       theme_classic() +
       annotate('text',
@@ -111,8 +111,8 @@ b <- all |>
 
 ggarrange(a, b,
           labels = c('a)','b)'),
-          ncol = 2, vjust = 1, align = "h",
+          ncol = 2, vjust = 1.3, align = "h",
           common.legend = TRUE, legend = 'right')
 
-ggsave("output/figs/supplemental-effect-of-year-on-stability.png", units = "in", width = 10,
+ggsave("output/figs/smf2.png", units = "in", width = 10,
        height = 5, dpi =  600)

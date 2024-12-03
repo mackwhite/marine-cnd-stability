@@ -75,26 +75,6 @@ dat_scaled <- dat |>
 
 glimpse(dat_scaled)
 
-### checking with round vs ceiling function
-dat <- read_csv('local_data/community-level-nutrient-stability-round-dec3.csv') |>
-      rename(
-            Program = program,
-            # Trophic_Group = troph_group,
-            # Species = scientific_name,
-            Habitat = habitat,
-            Site = site)
-
-dat_scaled <- dat |>
-      select(Program, Habitat, Site, comm_n_stability, everything()) |>
-      mutate(comm_n_stability = scale(comm_n_stability)) |>
-      group_by(Program) |>
-      ## this is a function syntax
-      mutate(across(comm_mean_bm:mean_trophic_diversity, \(x) scale(x, center = TRUE))) |>
-      ungroup()
-
-glimpse(dat_scaled)
-
-
 dat_ready <- dat_scaled
 ### clean env (optional) ---
 rm(dat_scaled)
@@ -159,7 +139,7 @@ dat |>
             legend.title = element_text(face = "bold", color = "black"),
             strip.text = element_text(face = "bold", color = "black"))
 
-ggsave("output/figs/program-stability.png", units = "in", width = 6,
+ggsave("output/figs/smf1.png", units = "in", width = 6,
        height = 5, dpi =  600)
 
 ### stability ~ richness ----
@@ -189,5 +169,5 @@ dat |>
             legend.text = element_text(face = "bold", color = "black"),
             legend.title = element_text(face = "bold", color = "black"))
 
-ggsave("output/figs/global-spprich-regression.png", units = "in", width = 5,
+ggsave("output/figs/fig2.png", units = "in", width = 6,
        height = 5, dpi =  600)
