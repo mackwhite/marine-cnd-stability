@@ -47,3 +47,8 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+*.tiff
+*.xlsx
+*.csv
+*.rds
+*.jpeg
