@@ -51,5 +51,6 @@ rsconnect/
 *.xlsx
 *.csv
 *.rds
+*.svg
 *.jpegs
 *.ppt
