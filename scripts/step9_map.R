@@ -45,7 +45,7 @@ librarian::shelf(tidyverse, readr, janitor, zoo,
 theme_set(theme_minimal())
 
 ### set up google map key ---
-api_secret <- 'XXX'
+api_secret <- 'AIzaSyB_Q-Ow1klpX9jblm7M2614k5KCVYUXTZM'
 register_google(key = api_secret)
 has_google_key()
 
@@ -91,9 +91,7 @@ ggmap(site_map) +
       #       legend.position = c(0.001, 0.275))
 
 ### save for publication
-ggsave("output/ms-second-round/plots/figure1/test-map.tiff", units = "in", width = 10,
-       height = 8, dpi =  600, compression = "lzw")
-ggsave("output/ms-second-round/plots/figure1/test-map.svg", units = "in", width = 10,
+ggsave("output/figs/map.png", units = "in", width = 10,
        height = 8, dpi =  600)
-# ggsave("output/ms-second-round/plots/figure1/map-scalebar-arrow.svg", units = "in", width = 10,
-#        height = 8, dpi =  600)
+ggsave("output/figs/map-with-scaleparrow.svg", units = "in", width = 10,
+       height = 8, dpi =  600)
