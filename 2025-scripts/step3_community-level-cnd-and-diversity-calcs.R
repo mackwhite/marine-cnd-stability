@@ -10,32 +10,32 @@
 # install.packages("librarian")
 librarian::shelf(tidyverse, googledrive, vegan, readxl, e1071, dplyr, splitstackshape)
 
-# ### set google drive paths
-# exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
-#       ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
-#       ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
-#       dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
-# 
-# strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) %>%
-#   dplyr::filter(name %in% c("strata_class.xlsx"))
-# 
-# ### combine file IDs
-# harmonized_ids <- rbind(exc_ids, strata_ids)
-# 
-# ### for each raw data file, download it into the consumer folder
-# for(k in 1:nrow(harmonized_ids)){
-#   
-#   ### download file (but silence how chatty this function is)
-#   googledrive::with_drive_quiet(
-#     googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
-#                                 path = file.path("tier2", harmonized_ids[k, ]$name)) )
-#   
-#   ### print success message
-#   message("Downloaded file ", k, " of ", nrow(harmonized_ids))
-# }
-# 
-# ### cleans environment
-# rm(list = ls()) 
+### set google drive paths
+exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
+      ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
+      ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
+      dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
+
+strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) %>%
+  dplyr::filter(name %in% c("strata_class.xlsx"))
+
+### combine file IDs
+harmonized_ids <- rbind(exc_ids, strata_ids)
+
+### for each raw data file, download it into the consumer folder
+for(k in 1:nrow(harmonized_ids)){
+  
+  ### download file (but silence how chatty this function is)
+  googledrive::with_drive_quiet(
+    googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
+                                path = file.path("tier2", harmonized_ids[k, ]$name)) )
+  
+  ### print success message
+  message("Downloaded file ", k, " of ", nrow(harmonized_ids))
+}
+
+### cleans environment
+rm(list = ls()) 
 
 ### read in clean excretion and strata data from google drive
 dt <- read.csv(file.path("tier2", "harmonized_consumer_excretion_CLEAN.csv"),stringsAsFactors = F,na.strings =".") |> 
@@ -84,7 +84,7 @@ dt_og <- dt1 |>
 glimpse(dt_og)
 
 ### check on the california moray to see if max size makes sense
-test <- dt_og |> group_by(project,scientific_name) |> summarize(max_size = max(dmperind_g_ind, na.rm = TRUE), mean_size = mean(dmperind_g_ind, na.rm = TRUE))
+test <- dt_og |> group_by(project,scientific_name) |> summarize(max_size = max(dmperind_g_ind), mean_size = mean(dmperind_g_ind))
 ### max reported weight for california moray is 80 lbs, so approximate dry weight of 20 lbs (or 9071 g)
 dt_og1 <- dt_og |> 
       mutate(dmperind_g_ind = case_when(dmperind_g_ind > 9071 & scientific_name == "Gymnothorax mordax" ~ 9071,
@@ -160,14 +160,7 @@ dt_mutate_1 <- no_fce_or_zeros |>
       )) |> 
       group_by(project) |> 
       # mutate(count = ceiling(density_num_m2*area)) |>
-      mutate(count = round(density_num_m2*area),
-             count = if_else(
-                   count == 0,
-                   1,
-                   count
-             )) |> 
-      filter(count <10000,
-             nind_ug_hr != 0) |> 
+      mutate(count = round(density_num_m2*area)) |>
       ungroup() |> 
       group_by(project) |> 
       expandRows(count = "count", drop = FALSE) |> 
@@ -438,60 +431,54 @@ model_dt <- dat_ready_3 |>
   summarize(comm_mean_n = mean(total_nitrogen_ann),
             comm_sd_n = sd(total_nitrogen_ann),
             comm_cv_n = (sd(total_nitrogen_ann, na.rm = TRUE) / mean(total_nitrogen_ann, na.rm = TRUE)),
-            ### nitrogen supply stability 
             comm_n_stability = 1/comm_cv_n,
             comm_mean_p = mean(total_phosphorus_ann),
             comm_sd_p = sd(total_phosphorus_ann),
             comm_cv_p = (sd(total_phosphorus_ann, na.rm = TRUE) / mean(total_phosphorus_ann, na.rm = TRUE)),
-            ### phosphorus supply stability
             comm_p_stability = 1/comm_cv_p,
             comm_mean_bm = mean(total_biomass_ann),
             comm_sd_bm = sd(total_biomass_ann),
             comm_cv_bm = (sd(total_biomass_ann, na.rm = TRUE) / mean(total_biomass_ann, na.rm = TRUE)),
-            ### biomass stability
             comm_bm_stability = 1/comm_cv_bm,
             comm_mean_max_ss = mean(max_size_ann),
             comm_cv_max_ss = (sd(max_size_ann, na.rm = TRUE) / mean(max_size_ann, na.rm = TRUE)),
-            ### max size stability
             comm_max_size_stability = 1/comm_cv_max_ss,
             comm_mean_skew_ss = mean(skew_size_ann),
             comm_cv_skew_ss = (sd(skew_size_ann, na.rm = TRUE) / mean(skew_size_ann, na.rm = TRUE)),
-            ### size structure stability
             comm_skew_size_stability = 1/comm_cv_skew_ss,
             mean_species_richness = mean(species_richness_ann),
             cv_species_richness = (sd(species_richness_ann, na.rm = TRUE) / mean(species_richness_ann, na.rm = TRUE)),
-            ### species richness stability
             species_richness_stability = 1/cv_species_richness,
             mean_species_diversity = mean(species_diversity_ann),
             cv_species_diversity = (sd(species_diversity_ann, na.rm = TRUE) / mean(species_diversity_ann, na.rm = TRUE)),
-            ### species diversity stability
             species_diversity_stability = 1/cv_species_diversity,
             mean_trophic_richness = mean(trophic_richness_ann),
             cv_trophic_richness = (sd(trophic_richness_ann, na.rm = TRUE) / mean(trophic_richness_ann, na.rm = TRUE)),
-            ### trophic richness stability
             trophic_richness_stability = 1/cv_trophic_richness,
             mean_trophic_diversity = mean(trophic_diversity_ann),
             cv_trophic_diversity = (sd(trophic_diversity_ann, na.rm = TRUE) / mean(trophic_diversity_ann, na.rm = TRUE)),
-            ### trophic diversity stability
-            trophic_diversity_stability = 1/cv_trophic_diversity,
-            raw_n_bm_differences = abs(comm_n_stability - comm_bm_stability),
-            raw_n_p_differences = abs(comm_p_stability - comm_bm_stability))|> 
+            trophic_diversity_stability = 1/cv_trophic_diversity)|> 
       ungroup()
 
-model_dt_1 <- model_dt
-### keeping everything for now, instead of filtering as previously
-# model_dt_1 <- model_dt |> 
-#       select(program, habitat, site, 
-#              comm_mean_bm, comm_sd_bm, comm_bm_stability, 
-#              comm_mean_n, comm_sd_n, comm_n_stability, 
-#              comm_mean_p, comm_sd_p, comm_p_stability, 
-#              comm_mean_max_ss, comm_mean_skew_ss,
-#              mean_species_richness, 
-#              mean_species_diversity, mean_trophic_richness, mean_trophic_diversity)
+model_dt_1 <- model_dt |> 
+      select(program, habitat, site, 
+             comm_mean_bm, comm_sd_bm, comm_bm_stability, 
+             comm_mean_n, comm_sd_n, comm_n_stability, 
+             comm_mean_p, comm_sd_p, comm_p_stability, 
+             comm_mean_max_ss, comm_mean_skew_ss,
+             mean_species_richness, 
+             mean_species_diversity, mean_trophic_richness, mean_trophic_diversity)
 
 glimpse(model_dt_1)
 
-# write_csv(model_dt_1, "2025-data/community-level-nutrient-stability.csv")
+# write_csv(model_dt_1, "local_data/cnd_mdl_data_10_08_2024.csv")
+# write_csv(dat_ready_3, "local_data/cnd_diversity_model_data_long_08142024.csv")
+# write_csv(model_dt_1, "local_data/community-level-nutrient-stability_10172024.csv")
+# write_csv(model_dt_1, "local_data/community-level-nutrient-stability_10292024.csv")
+# write_csv(model_dt_1, "local_data/community-level-nutrient-stability_11012024.csv")
+write_csv(model_dt_1, "local_data/community-level-nutrient-stability.csv")
+
+### look into Sys.Date() function for automatically updating data in files that I read out
 
 model_dt_1 |>
       ggplot(aes(comm_n_stability, comm_p_stability))+
@@ -519,4 +506,28 @@ annual_dt <- dat_ready_3 |>
 glimpse(annual_dt)
 # write_csv(annual_dt, "local_data/annual-dt-for-summary11012024.csv")
 # write_csv(annual_dt, "local_data/annual-dt-for-summary11142024.csv")
-# write_csv(annual_dt, "2025-data/annual-dt-for-summary.csv")
+write_csv(annual_dt, "local_data/annual-dt-for-summary.csv")
+
+
+# model_dt_1 |> 
+#       mutate(comm_n_stability = scale(comm_n_stability)) |> 
+#       group_by(program) |> 
+#       mutate(mean_species_richness = scale(mean_species_richness)) |> 
+#       ungroup() |> 
+#       ggplot(aes(x = mean_species_richness, y = comm_n_stability, color = program)) +
+#       geom_point(size = 3) +  # Adds the scatter plot points
+#       geom_smooth(method = "lm", se = FALSE) +  # Adds linear model lines for each program
+#       geom_smooth(aes(group = 1), method = "lm", se = FALSE, color = "black", linetype = "solid") +  # Adds overall slope line
+#       labs(x = "Scaled Species Richness",
+#            y = "Scaled Aggregate Nitrogen Supply Stability (1/CV)") +
+#       theme_classic() +
+#       scale_color_manual(values = palette) +
+#       scale_y_continuous(breaks = -2:3) +
+#       scale_x_continuous(breaks = -2:2) +
+#       theme(axis.text.x = element_text(face = "bold", color = "black"),
+#             axis.text.y = element_text(face = "bold", color = "black"),
+#             axis.title.x = element_text(face = "bold", color = "black"),
+#             axis.title.y = element_text(face = "bold", color = "black"),
+#             legend.position = "right",
+#             legend.text = element_text(face = "bold", color = "black"),
+#             legend.title = element_text(face = "bold", color = "black"))

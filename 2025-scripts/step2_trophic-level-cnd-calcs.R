@@ -8,34 +8,34 @@
 
 ### load necessary libraries
 # install.packages("librarian")
-librarian::shelf(tidyverse, codyn, googledrive, vegan, readxl, e1071, dplyr, splitstackshape)
+librarian::shelf(tidyverse, googledrive, vegan, readxl, e1071, dplyr, splitstackshape)
 
-# ### set google drive paths
-# exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
-#       ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
-#       ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
-#       dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
-# 
-# strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) |> 
-#       dplyr::filter(name %in% c("strata_class.xlsx"))
-# 
-# ### combine file IDs
-# harmonized_ids <- rbind(exc_ids, strata_ids)
-# 
-# ### for each raw data file, download it into the consumer folder
-# for(k in 1:nrow(harmonized_ids)){
-#       
-#       ### download file (but silence how chatty this function is)
-#       googledrive::with_drive_quiet(
-#             googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
-#                                         path = file.path("tier2", harmonized_ids[k, ]$name)) )
-#       
-#       ### print success message
-#       message("Downloaded file ", k, " of ", nrow(harmonized_ids))
-# }
-# 
-# ### cleans environment
-# rm(list = ls()) 
+### set google drive paths
+exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
+      ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
+      ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
+      dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
+
+strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) %>%
+      dplyr::filter(name %in% c("strata_class.xlsx"))
+
+### combine file IDs
+harmonized_ids <- rbind(exc_ids, strata_ids)
+
+### for each raw data file, download it into the consumer folder
+for(k in 1:nrow(harmonized_ids)){
+      
+      ### download file (but silence how chatty this function is)
+      googledrive::with_drive_quiet(
+            googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
+                                        path = file.path("tier2", harmonized_ids[k, ]$name)) )
+      
+      ### print success message
+      message("Downloaded file ", k, " of ", nrow(harmonized_ids))
+}
+
+### cleans environment
+rm(list = ls()) 
 
 ### read in clean excretion and strata data from google drive
 dt <- read.csv(file.path("tier2", "harmonized_consumer_excretion_CLEAN.csv"),stringsAsFactors = F,na.strings =".") |> 
@@ -160,14 +160,7 @@ dt_mutate_1 <- no_fce_or_zeros |>
       )) |> 
       group_by(project) |> 
       # mutate(count = ceiling(density_num_m2*area)) |> 
-      mutate(count = round(density_num_m2*area),
-             count = if_else(
-                   count == 0,
-                   1,
-                   count
-             )) |> 
-      filter(count <10000,
-             nind_ug_hr != 0) |> 
+      mutate(count = round(density_num_m2*area)) |> 
       ungroup() |> 
       group_by(project) |> 
       expandRows(count = "count", drop = FALSE) |> 
@@ -178,7 +171,7 @@ dt_mutate_1 <- no_fce_or_zeros |>
       dplyr::select(-count,-area)
 
 dt_mutate_2 <- rbind(dt_mutate_1,dt_mutate_fce,m_zero_save,m2_zero_save)
-# rm(dt_mutate,dt_mutate_1,fce_plus_zero_save,no_fce_or_zeros)
+rm(dt_mutate,dt_mutate_1,fce_plus_zero_save,no_fce_or_zeros)
 ##########################################################################
 ### coding with AC to get the max size of each species in the population
 ### unique to step3 - we are not doing this for population or trophic levels
@@ -190,6 +183,50 @@ dt_mutate_2 <- rbind(dt_mutate_1,dt_mutate_fce,m_zero_save,m2_zero_save)
 #       ungroup()
 ##########################################################################
 ### here is where steps four-five begin to differ from steps one-three ---
+##########################################################################
+### summarize data at "finest" scale for each individual program (e.g.,
+### transect or bout) - LK updates at June meeting allow appropriate
+### resolution for PISCO datasets
+
+### check for NAs
+na_count_per_column <- sapply(dt_mutate_2, function(x) sum(is.na(x)))
+print(na_count_per_column) #yay
+
+dt_troph <- dt_mutate_2 |> 
+      group_by(project, habitat, year, month, 
+               site, subsite_level1, subsite_level2, subsite_level3, 
+               diet_cat) |> 
+      summarize(
+            ### calculate total nitrogen supply at each sampling unit and then sum to get column with all totals
+            troph_nitrogen_m = sum(nind_ug_hr * density_num_m, na.rm = TRUE),
+            troph_nitrogen_m2 = sum(nind_ug_hr * density_num_m2, na.rm = TRUE),
+            # total_nitrogen_m3 = sum(nind_ug_hr * density_num_m3, na.rm = TRUE),
+            ### create column with total_nitrogen contribution for each program, regardless of units
+            troph_nitrogen = sum(troph_nitrogen_m + troph_nitrogen_m2, na.rm = TRUE),
+            ### calculate total phosphorus supply at each sampling unit and then sum to get column with all totals
+            troph_phosphorus_m = sum(pind_ug_hr * density_num_m, na.rm = TRUE),
+            troph_phosphorus_m2 = sum(pind_ug_hr * density_num_m2, na.rm = TRUE),
+            # total_phosphorus_m3 = sum(pind_ug_hr * density_num_m3, na.rm = TRUE),
+            ### create column with total_phosphorus contribution for each program, regardless of units
+            troph_phosphorus = sum(troph_phosphorus_m + troph_phosphorus_m2, na.rm = TRUE),
+            ### calculate total biomass at each sampling unit and then sum to get column with all totals
+            troph_bm_m = sum(dmperind_g_ind*density_num_m, na.rm = TRUE),
+            troph_bm_m2 = sum(dmperind_g_ind*density_num_m2, na.rm = TRUE),
+            # total_bm_m3 = sum(dmperind_g_ind*density_num_m3, na.rm = TRUE),
+            ### create column with total_biomass for each program, regardless of units
+            troph_biomass = sum(troph_bm_m + troph_bm_m2, na.rm = TRUE)) |> 
+      ungroup() |>
+      dplyr::select(-troph_nitrogen_m, -troph_nitrogen_m2,
+                    -troph_phosphorus_m, -troph_phosphorus_m2,
+                    -troph_bm_m, -troph_bm_m2) |>
+      arrange(project,diet_cat,habitat, year, month, site, 
+              subsite_level1, subsite_level2, subsite_level3) |> 
+      rename(troph_group = diet_cat)
+
+### check for NAs
+na_count_per_column <- sapply(dt_troph, function(x) sum(is.na(x)))
+print(na_count_per_column) #yay
+
 ###########################################################################
 # add strata of interest to each project ----------------------------------
 ###########################################################################
@@ -204,19 +241,19 @@ strata_list1 <- strata_list %>%
       distinct()
 
 ### join together the datasets of nutrient supply and biomass with strata
-dt_total_strata <- left_join(dt_mutate_2, 
-                             strata_list1, 
-                             by = c("project", "habitat", "site",
-                                    "subsite_level1", "subsite_level2")) |> 
+dt_troph_strata <- left_join(dt_troph, 
+                           strata_list1, 
+                           by = c("project", "habitat", "site",
+                                  "subsite_level1", "subsite_level2")) |> 
       unite("projecthabitat", project, habitat, sep = "-", remove = FALSE) |> 
       rename(strata = ecoregion_habitat) |> 
       select(project, habitat, projecthabitat, strata, year, month, site, subsite_level1, 
              subsite_level2, subsite_level3, everything())
 
-
 ### Check NAs
-na_count_per_column <- sapply(dt_total_strata, function(x) sum(is.na(x)))
+na_count_per_column <- sapply(dt_troph_strata, function(x) sum(is.na(x)))
 print(na_count_per_column) #yayay
+glimpse(dt_troph_strata)
 
 ###########################################################################
 # set up individual projects/habitats for analyses and plotting -----------
@@ -230,7 +267,7 @@ print(na_count_per_column) #yayay
 # individually
 
 ### CoastalCA-ocean
-pisco_central <- dt_total_strata |> 
+pisco_central <- dt_troph_strata |> 
       filter(projecthabitat == "CoastalCA-ocean",
              site == "CENTRAL") |> #split pisco into central and southern
       mutate(group = subsite_level2,
@@ -240,7 +277,7 @@ pisco_central <- dt_total_strata |>
       ### added new resolution group wants considered for examination -> functionally the "site" for each project
       unite(color2, c(subsite_level2, color), sep = "-", remove = FALSE)
 
-pisco_south <- dt_total_strata |> 
+pisco_south <- dt_troph_strata |> 
       filter(projecthabitat == "CoastalCA-ocean",
              site == "SOUTH") |> #split pisco into central and southern
       mutate(group = subsite_level2,
@@ -251,7 +288,7 @@ pisco_south <- dt_total_strata |>
       unite(color2, c(subsite_level2, color), sep = "-", remove = FALSE)
 
 ### FCE-estuary
-fce <- dt_total_strata |> 
+fce <- dt_troph_strata |> 
       filter(projecthabitat == "FCE-estuary") |>
       mutate(group = subsite_level1,
              color = strata,
@@ -260,7 +297,7 @@ fce <- dt_total_strata |>
       unite(color2, c(site, subsite_level1), sep = "-", remove = FALSE)
 
 ### MCR-ocean
-mcr <- dt_total_strata |> 
+mcr <- dt_troph_strata |> 
       filter(projecthabitat == "MCR-ocean") |> 
       ### join site and subsite_level1 according DB request for grouping variable
       unite("group", site, subsite_level1, sep = "-", remove = FALSE) |>
@@ -271,7 +308,7 @@ mcr <- dt_total_strata |>
       unite(color2, c(subsite_level1, site), sep = "-", remove = FALSE)
 
 ### SBC-ocean
-sbc <- dt_total_strata |> 
+sbc <- dt_troph_strata |> 
       filter(projecthabitat == "SBC-ocean") |> 
       mutate(group = site,
              color = strata,
@@ -280,7 +317,7 @@ sbc <- dt_total_strata |>
       unite(color2, c(site, color), sep = "-", remove = FALSE)
 
 ### VCR-estuary
-vcr <- dt_total_strata |> 
+vcr <- dt_troph_strata |> 
       filter(projecthabitat == "VCR-estuary") |> 
       mutate(group = subsite_level1,
              color = strata,
@@ -310,13 +347,12 @@ label_mapping <- data.frame(
 print(label_mapping) #looks good
 
 unique(dat_ready$color)
-### in different order, because didn't have arrange upstream (e.g., step1 - line 190)
 habitat_mapping <- data.frame(
       color = unique(dat_ready$color),
       Habitat = c(
             "Riverine", "Bay", #FCE
-            "Back Reef", "Fringing Reef", "Fore Reef", #MCR
-            "Reference", "Marine Protected Area", #PISCO-Central, PISCO-South, SBC-Beach, & SBC-Ocean
+            "Back Reef", "Fore Reef", "Fringing Reef", #MCR
+            "Marine Protected Area", "Reference", #PISCO-Central, PISCO-South, SBC-Beach, & SBC-Ocean
             "Seagrass", "Sand")) #VCR
 print(habitat_mapping) #yayayay
 
@@ -324,10 +360,9 @@ dat_ready_2 <- dat_ready |>
       left_join(label_mapping, by = "projecthabitat") |>
       left_join(habitat_mapping, by = "color") |>
       ### remove columns needed for joins up to this point
-      select(-projecthabitat, -habitat, -project, -color) |> ### KEEP SITE HERE FOR SPECIES PRESENCE CALC
+      select(-projecthabitat, -habitat, -project, -color, -site) |> 
       ### rename columns to be more representative/clean
-      ### added "_CORRECT" to maintain original designations used in CND calcs - will right when creating species-presence data frame
-      rename(site_CORRECT = color2,
+      rename(site = color2,
              program = Project, 
              habitat = Habitat) |> 
       dplyr::select(program, habitat, site, year, month, everything())
@@ -336,87 +371,64 @@ glimpse(dat_ready_2)
 unique(dat_ready_2$habitat)
 
 dat_ready_3 <- dat_ready_2 |> 
-      filter(!site_CORRECT %in% c("TB-5", "RB-17", "RB-19"))
-### keep everything below for right now
-# select(-strata, -subsite_level1, -subsite_level2, -subsite_level3, 
-#        -n_spp, -mean_size, -min_size, -group, -units)
+      filter(!site %in% c("TB-5", "RB-17", "RB-19") ) |> 
+      select(-strata, -subsite_level1, -subsite_level2, -subsite_level3, 
+             -group, -units)
 
 glimpse(dat_ready_3)
-unique(dat_ready_3$site_CORRECT)
+unique(dat_ready_3$site)
+summary(dat_ready_3)
 
-###########################################################################
-# turnover and synchrony metrics ------------------------------------------
-###########################################################################
-
-dat_ready_4 <- dat_ready_3 |> 
-      mutate(year_month = paste(year, month, sep = "-")) |> 
-      select(year_month, everything())
-
-rm(dat_ready, dat_ready_2, dat_ready_3, dt_mutate_2, dt_total_strata)
-
-species_presence <- dat_ready_4 |> 
-      ###remove habitat, because different than what it came in as - dont need it here
-      group_by(program, year, month, 
-               site, subsite_level1, subsite_level2, subsite_level3, 
-               scientific_name) |> 
-      mutate(total_bm_m = sum(dmperind_g_ind*density_num_m, na.rm = TRUE),
-             total_bm_m2 = sum(dmperind_g_ind*density_num_m2, na.rm = TRUE),
-             total_biomass = sum(total_bm_m + total_bm_m2, na.rm = TRUE),
-             total_density_m = sum(density_num_m, na.rm = TRUE),
-             total_density_m2 = sum(density_num_m2, na.rm = TRUE),
-             total_density = sum(total_density_m + total_density_m2, na.rm = TRUE)) |> 
-      ungroup() |>
-      dplyr::select(
-            -total_bm_m, -total_bm_m2,
-            -total_density_m, -total_density_m2, -site) |> 
-      rename(site = site_CORRECT) |> 
-      # arrange(program, habitat, year, month, site, subsite_level1, subsite_level2, subsite_level3, scientific_name) |> 
-      group_by(program, habitat, year, site, scientific_name) |> 
-      summarize(mean_total_bm = mean(total_biomass),
-                mean_total_dens = mean(total_density)) |> 
+### summarize all sites measured within the dataset annualy, then across period of record
+model_dt <- dat_ready_3 |> 
+      group_by(program, troph_group, habitat, site, year) |> 
+      summarize(total_nitrogen_ann = mean(troph_nitrogen),
+                total_phosphorus_ann = mean(troph_phosphorus),
+                total_biomass_ann = mean(troph_biomass)) |> 
+      ungroup() |> 
+      group_by(program, troph_group, habitat, site) |> 
+      summarize(troph_mean_n = mean(total_nitrogen_ann),
+                troph_sd_n = sd(total_nitrogen_ann),
+                troph_cv_n = (sd(total_nitrogen_ann, na.rm = TRUE) / mean(total_nitrogen_ann, na.rm = TRUE)),
+                troph_n_stability = 1/troph_cv_n,
+                troph_mean_p = mean(total_phosphorus_ann),
+                troph_sd_p = sd(total_phosphorus_ann),
+                troph_cv_p = (sd(total_phosphorus_ann, na.rm = TRUE) / mean(total_phosphorus_ann, na.rm = TRUE)),
+                troph_p_stability = 1/troph_cv_p,
+                troph_mean_bm = mean(total_biomass_ann),
+                troph_sd_bm = sd(total_biomass_ann),
+                troph_cv_bm = (sd(total_biomass_ann, na.rm = TRUE) / mean(total_biomass_ann, na.rm = TRUE)),
+                troph_bm_stability = 1/troph_cv_bm)|> 
       ungroup()
 
-### decided we did not need this for synchrony and beta calculations with
-### with WRJ on 07/16/2024
-# mutate(mean_total_dens_1p = ifelse(
-#       mean_total_dens > 0, mean_total_dens + 1, 0), 
-#       incidence = ifelse(
-#             mean_total_dens > 0, 1, 0))
+model_dt_1 <- model_dt |> 
+      filter(troph_mean_bm != 0)
 
+glimpse(model_dt_1)
 
-### clean up environment
-keep <- c("species_presence", "dat_ready_4")  # Replace with the names of your data frames
-rm(list = setdiff(ls(), keep))
+### look into Sys.Date() function for automatically updating data in files that I read out
 
-testy <- species_presence |> 
-      mutate(psh = paste(program, habitat, site, sep = ":"))
+model_dt_1 |>
+      ggplot(aes(troph_n_stability, troph_p_stability))+
+      geom_point()+
+      geom_abline()
 
-psh_vec = unique(testy$psh)
-df_temp <- data.frame(matrix(ncol=3,nrow=length(psh_vec)))
-df_temp[,1] <- psh_vec
-names(df_temp)<-c("psh_vec","beta_time","synch")
+model_dt_1 |>
+      ggplot(aes(troph_bm_stability, troph_n_stability))+
+      geom_point()+
+      geom_abline()
 
-for (i in 1:length(psh_vec)){
-      temp <- testy |> 
-            filter(psh == psh_vec[i])
-      beta_temp <- turnover(df = temp, time.var = "year", 
-                            abundance.var = "mean_total_dens", 
-                            species.var = "scientific_name",
-                            metric = "total")
-      
-      df_temp[i,2]<-mean(beta_temp[,1])
-      
-      
-      synch_temp <- synchrony (df=temp,
-                               time.var="year",
-                               species.var="scientific_name",
-                               abundance.var ="mean_total_bm",
-                               metric = "Loreau",
-                               replicate.var=NA)
-      df_temp[i,3]<-synch_temp
-}
+# write_csv(model_dt_1, "local_data/trophic-level-nutrient-stability_10172024.csv")
+# write_csv(model_dt_1, "local_data/trophic-level-nutrient-stability_10292024.csv")
+# write_csv(model_dt_1, "local_data/trophic-level-nutrient-stability_11012024.csv")
+write_csv(model_dt_1, "local_data/trophic-level-nutrient-stability.csv")
 
-df_temp_final <- df_temp |> 
-      separate(col = psh_vec, into = c("program", "habitat", "site"), sep = ":")
-
-write_csv(df_temp_final, "2025-data/population-turnover-synchrony.csv")
+### saving data at annual timesteps for summary figures and statistics
+annual_dt <- dat_ready_3 |> 
+      group_by(program, habitat, site, troph_group, year) |> 
+      summarize(tg_nitrogen_ann = mean(troph_nitrogen),
+                tg_phosphorus_ann = mean(troph_phosphorus),
+                tg_biomass_ann = mean(troph_biomass)) |> 
+      ungroup()
+glimpse(annual_dt)
+# write_csv(annual_dt, "local_data/annual-trophic-dt-for-summary.csv")

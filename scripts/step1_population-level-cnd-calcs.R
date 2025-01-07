@@ -10,32 +10,32 @@
 # install.packages("librarian")
 librarian::shelf(tidyverse, googledrive, vegan, readxl, e1071, dplyr, splitstackshape)
 
-### set google drive paths
-exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
-      ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
-      ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
-      dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
-
-strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) %>%
-      dplyr::filter(name %in% c("strata_class.xlsx"))
-
-### combine file IDs
-harmonized_ids <- rbind(exc_ids, strata_ids)
-
-### for each raw data file, download it into the consumer folder
-for(k in 1:nrow(harmonized_ids)){
-      
-      ### download file (but silence how chatty this function is)
-      googledrive::with_drive_quiet(
-            googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
-                                        path = file.path("tier2", harmonized_ids[k, ]$name)) )
-      
-      ### print success message
-      message("Downloaded file ", k, " of ", nrow(harmonized_ids))
-}
-
-### cleans environment
-rm(list = ls()) 
+# ### set google drive paths
+# exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
+#       ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
+#       ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
+#       dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
+# 
+# strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) %>%
+#       dplyr::filter(name %in% c("strata_class.xlsx"))
+# 
+# ### combine file IDs
+# harmonized_ids <- rbind(exc_ids, strata_ids)
+# 
+# ### for each raw data file, download it into the consumer folder
+# for(k in 1:nrow(harmonized_ids)){
+#       
+#       ### download file (but silence how chatty this function is)
+#       googledrive::with_drive_quiet(
+#             googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
+#                                         path = file.path("tier2", harmonized_ids[k, ]$name)) )
+#       
+#       ### print success message
+#       message("Downloaded file ", k, " of ", nrow(harmonized_ids))
+# }
+# 
+# ### cleans environment
+# rm(list = ls()) 
 
 ### read in clean excretion and strata data from google drive
 dt <- read.csv(file.path("tier2", "harmonized_consumer_excretion_CLEAN.csv"),stringsAsFactors = F,na.strings =".") |> 
@@ -84,7 +84,7 @@ dt_og <- dt1 |>
 glimpse(dt_og)
 
 ### check on the california moray to see if max size makes sense
-test <- dt_og |> group_by(project,scientific_name) |> summarize(max_size = max(dmperind_g_ind), mean_size = mean(dmperind_g_ind))
+test <- dt_og |> group_by(project,scientific_name) |> summarize(max_size = max(dmperind_g_ind, na.rm = TRUE), mean_size = mean(dmperind_g_ind, na.rm = TRUE))
 ### max reported weight for california moray is 80 lbs, so approximate dry weight of 20 lbs (or 9071 g)
 dt_og1 <- dt_og |> 
       mutate(dmperind_g_ind = case_when(dmperind_g_ind > 9071 & scientific_name == "Gymnothorax mordax" ~ 9071,
@@ -159,8 +159,14 @@ dt_mutate_1 <- no_fce_or_zeros |>
             project == "MCR" & subsite_level3 == "5" ~ 250
       )) |> 
       group_by(project) |> 
-      # mutate(count = ceiling(density_num_m2*area)) |> 
-      mutate(count = round(density_num_m2*area)) |> 
+      mutate(count = round(density_num_m2*area),
+             count = if_else(
+                   count == 0,
+                   1,
+                   count
+             )) |> 
+      filter(count <10000,
+             nind_ug_hr != 0) |> 
       ungroup() |> 
       group_by(project) |> 
       expandRows(count = "count", drop = FALSE) |> 
@@ -171,7 +177,7 @@ dt_mutate_1 <- no_fce_or_zeros |>
       dplyr::select(-count,-area)
 
 dt_mutate_2 <- rbind(dt_mutate_1,dt_mutate_fce,m_zero_save,m2_zero_save)
-rm(dt_mutate,dt_mutate_1,fce_plus_zero_save,no_fce_or_zeros)
+# rm(dt_mutate,dt_mutate_1,fce_plus_zero_save,no_fce_or_zeros)
 ##########################################################################
 ### coding with AC to get the max size of each species in the population
 ### unique to step3 - we are not doing this for population or trophic levels
@@ -402,16 +408,12 @@ model_dt <- dat_ready_3 |>
       ungroup()
 
 model_dt_1 <- model_dt |> 
-      filter(spp_mean_bm != 0,
-             spp_cv_bm != 0,
-             spp_mean_n != 0,
-             spp_n_stability <6)
+      filter(spp_bm_stability <=7)
 
 glimpse(model_dt_1)
+test <- model_dt |> filter(is.na(spp_bm_stability))
 
-### look into Sys.Date() function for automatically updating data in files that I read out
-
-model_dt_1 |>
+model_dt_1|>
       ggplot(aes(spp_n_stability, spp_p_stability))+
       geom_point()+
       geom_abline()
@@ -421,7 +423,4 @@ model_dt_1 |>
       geom_point()+
       geom_abline()
 
-# write_csv(model_dt_1, "local_data/species-level-nutrient-stability_10182024.csv")
-# write_csv(model_dt_1, "local_data/species-level-nutrient-stability_10292024.csv")
-# write_csv(model_dt_1, "local_data/species-level-nutrient-stability_11012024.csv")
-# write_csv(model_dt_1, "local_data/species-level-nutrient-stability.csv")
+# write_csv(model_dt_1, "2025-data/species-level-nutrient-stability.csv")

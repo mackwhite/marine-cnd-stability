@@ -10,32 +10,32 @@
 # install.packages("librarian")
 librarian::shelf(tidyverse, codyn, googledrive, vegan, readxl, e1071, dplyr, splitstackshape)
 
-# ### set google drive paths
-# exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
-#       ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
-#       ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
-#       dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
-# 
-# strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) |> 
-#       dplyr::filter(name %in% c("strata_class.xlsx"))
-# 
-# ### combine file IDs
-# harmonized_ids <- rbind(exc_ids, strata_ids)
-# 
-# ### for each raw data file, download it into the consumer folder
-# for(k in 1:nrow(harmonized_ids)){
-#       
-#       ### download file (but silence how chatty this function is)
-#       googledrive::with_drive_quiet(
-#             googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
-#                                         path = file.path("tier2", harmonized_ids[k, ]$name)) )
-#       
-#       ### print success message
-#       message("Downloaded file ", k, " of ", nrow(harmonized_ids))
-# }
-# 
-# ### cleans environment
-# rm(list = ls()) 
+### set google drive paths
+exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
+      ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
+      ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
+      dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
+
+strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) |> 
+      dplyr::filter(name %in% c("strata_class.xlsx"))
+
+### combine file IDs
+harmonized_ids <- rbind(exc_ids, strata_ids)
+
+### for each raw data file, download it into the consumer folder
+for(k in 1:nrow(harmonized_ids)){
+      
+      ### download file (but silence how chatty this function is)
+      googledrive::with_drive_quiet(
+            googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
+                                        path = file.path("tier2", harmonized_ids[k, ]$name)) )
+      
+      ### print success message
+      message("Downloaded file ", k, " of ", nrow(harmonized_ids))
+}
+
+### cleans environment
+rm(list = ls()) 
 
 ### read in clean excretion and strata data from google drive
 dt <- read.csv(file.path("tier2", "harmonized_consumer_excretion_CLEAN.csv"),stringsAsFactors = F,na.strings =".") |> 
@@ -160,14 +160,7 @@ dt_mutate_1 <- no_fce_or_zeros |>
       )) |> 
       group_by(project) |> 
       # mutate(count = ceiling(density_num_m2*area)) |> 
-      mutate(count = round(density_num_m2*area),
-             count = if_else(
-                   count == 0,
-                   1,
-                   count
-             )) |> 
-      filter(count <10000,
-             nind_ug_hr != 0) |> 
+      mutate(count = round(density_num_m2*area)) |> 
       ungroup() |> 
       group_by(project) |> 
       expandRows(count = "count", drop = FALSE) |> 
@@ -178,7 +171,7 @@ dt_mutate_1 <- no_fce_or_zeros |>
       dplyr::select(-count,-area)
 
 dt_mutate_2 <- rbind(dt_mutate_1,dt_mutate_fce,m_zero_save,m2_zero_save)
-# rm(dt_mutate,dt_mutate_1,fce_plus_zero_save,no_fce_or_zeros)
+rm(dt_mutate,dt_mutate_1,fce_plus_zero_save,no_fce_or_zeros)
 ##########################################################################
 ### coding with AC to get the max size of each species in the population
 ### unique to step3 - we are not doing this for population or trophic levels
@@ -383,11 +376,6 @@ species_presence <- dat_ready_4 |>
 #       incidence = ifelse(
 #             mean_total_dens > 0, 1, 0))
 
-
-### clean up environment
-keep <- c("species_presence", "dat_ready_4")  # Replace with the names of your data frames
-rm(list = setdiff(ls(), keep))
-
 testy <- species_presence |> 
       mutate(psh = paste(program, habitat, site, sep = ":"))
 
@@ -419,4 +407,7 @@ for (i in 1:length(psh_vec)){
 df_temp_final <- df_temp |> 
       separate(col = psh_vec, into = c("program", "habitat", "site"), sep = ":")
 
-write_csv(df_temp_final, "2025-data/population-turnover-synchrony.csv")
+# write_csv(df_temp_final, "local_data/turnover_synchrony_08012024.csv")
+# write_csv(df_temp_final, "local_data/turnover_synchrony_10292024.csv")
+# write_csv(df_temp_final, "local_data/turnover_synchrony_11012024.csv")
+write_csv(df_temp_final, "local_data/population-turnover-synchrony.csv")

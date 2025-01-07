@@ -10,32 +10,32 @@
 # install.packages("librarian")
 librarian::shelf(tidyverse, googledrive, vegan, readxl, e1071, dplyr, splitstackshape)
 
-### set google drive paths
-exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
-      ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
-      ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
-      dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
-
-strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) %>%
-      dplyr::filter(name %in% c("strata_class.xlsx"))
-
-### combine file IDs
-harmonized_ids <- rbind(exc_ids, strata_ids)
-
-### for each raw data file, download it into the consumer folder
-for(k in 1:nrow(harmonized_ids)){
-      
-      ### download file (but silence how chatty this function is)
-      googledrive::with_drive_quiet(
-            googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
-                                        path = file.path("tier2", harmonized_ids[k, ]$name)) )
-      
-      ### print success message
-      message("Downloaded file ", k, " of ", nrow(harmonized_ids))
-}
-
-### cleans environment
-rm(list = ls()) 
+# ### set google drive paths
+# exc_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/0/folders/1VakpcnFVckAYNggv_zNyfDRfkcGTjZxX")) |> 
+#       ### updated this file after hierarchical NA-filling for some sites, plus correcting PISCO biomass estimates (i.e., previously at transect, not m2 level)
+#       ### renamed previous version as 'harmonized_consumer_excretion_CLEANV1.csv'
+#       dplyr::filter(name %in% c("harmonized_consumer_excretion_CLEAN.csv"))
+# 
+# strata_ids <- googledrive::drive_ls(googledrive::as_id("https://drive.google.com/drive/u/1/folders/1CEgNtAnk4DuPNpR3lJN9IqpjWq0cM8F4")) %>%
+#       dplyr::filter(name %in% c("strata_class.xlsx"))
+# 
+# ### combine file IDs
+# harmonized_ids <- rbind(exc_ids, strata_ids)
+# 
+# ### for each raw data file, download it into the consumer folder
+# for(k in 1:nrow(harmonized_ids)){
+#       
+#       ### download file (but silence how chatty this function is)
+#       googledrive::with_drive_quiet(
+#             googledrive::drive_download(file = harmonized_ids[k, ]$id, overwrite = T,
+#                                         path = file.path("tier2", harmonized_ids[k, ]$name)) )
+#       
+#       ### print success message
+#       message("Downloaded file ", k, " of ", nrow(harmonized_ids))
+# }
+# 
+# ### cleans environment
+# rm(list = ls()) 
 
 ### read in clean excretion and strata data from google drive
 dt <- read.csv(file.path("tier2", "harmonized_consumer_excretion_CLEAN.csv"),stringsAsFactors = F,na.strings =".") |> 
@@ -84,7 +84,7 @@ dt_og <- dt1 |>
 glimpse(dt_og)
 
 ### check on the california moray to see if max size makes sense
-test <- dt_og |> group_by(project,scientific_name) |> summarize(max_size = max(dmperind_g_ind), mean_size = mean(dmperind_g_ind))
+test <- dt_og |> group_by(project,scientific_name) |> summarize(max_size = max(dmperind_g_ind, na.rm = TRUE), mean_size = mean(dmperind_g_ind, na.rm = TRUE))
 ### max reported weight for california moray is 80 lbs, so approximate dry weight of 20 lbs (or 9071 g)
 dt_og1 <- dt_og |> 
       mutate(dmperind_g_ind = case_when(dmperind_g_ind > 9071 & scientific_name == "Gymnothorax mordax" ~ 9071,
@@ -160,7 +160,14 @@ dt_mutate_1 <- no_fce_or_zeros |>
       )) |> 
       group_by(project) |> 
       # mutate(count = ceiling(density_num_m2*area)) |> 
-      mutate(count = round(density_num_m2*area)) |> 
+      mutate(count = round(density_num_m2*area),
+             count = if_else(
+                   count == 0,
+                   1,
+                   count
+             )) |> 
+      filter(count <10000,
+             nind_ug_hr != 0) |> 
       ungroup() |> 
       group_by(project) |> 
       expandRows(count = "count", drop = FALSE) |> 
@@ -171,7 +178,7 @@ dt_mutate_1 <- no_fce_or_zeros |>
       dplyr::select(-count,-area)
 
 dt_mutate_2 <- rbind(dt_mutate_1,dt_mutate_fce,m_zero_save,m2_zero_save)
-rm(dt_mutate,dt_mutate_1,fce_plus_zero_save,no_fce_or_zeros)
+# rm(dt_mutate,dt_mutate_1,fce_plus_zero_save,no_fce_or_zeros)
 ##########################################################################
 ### coding with AC to get the max size of each species in the population
 ### unique to step3 - we are not doing this for population or trophic levels
@@ -398,11 +405,12 @@ model_dt <- dat_ready_3 |>
                 troph_mean_bm = mean(total_biomass_ann),
                 troph_sd_bm = sd(total_biomass_ann),
                 troph_cv_bm = (sd(total_biomass_ann, na.rm = TRUE) / mean(total_biomass_ann, na.rm = TRUE)),
-                troph_bm_stability = 1/troph_cv_bm)|> 
+                troph_bm_stability = 1/troph_cv_bm,
+                raw_troph_n_bm_differences = abs(troph_n_stability - troph_bm_stability),
+                raw_troph_n_p_differences = abs(troph_p_stability - troph_bm_stability))|>
       ungroup()
 
-model_dt_1 <- model_dt |> 
-      filter(troph_mean_bm != 0)
+model_dt_1 <- model_dt
 
 glimpse(model_dt_1)
 
@@ -418,10 +426,7 @@ model_dt_1 |>
       geom_point()+
       geom_abline()
 
-# write_csv(model_dt_1, "local_data/trophic-level-nutrient-stability_10172024.csv")
-# write_csv(model_dt_1, "local_data/trophic-level-nutrient-stability_10292024.csv")
-# write_csv(model_dt_1, "local_data/trophic-level-nutrient-stability_11012024.csv")
-write_csv(model_dt_1, "local_data/trophic-level-nutrient-stability.csv")
+# write_csv(model_dt_1, "2025-data/trophic-level-nutrient-stability.csv")
 
 ### saving data at annual timesteps for summary figures and statistics
 annual_dt <- dat_ready_3 |> 
@@ -431,4 +436,4 @@ annual_dt <- dat_ready_3 |>
                 tg_biomass_ann = mean(troph_biomass)) |> 
       ungroup()
 glimpse(annual_dt)
-# write_csv(annual_dt, "local_data/annual-trophic-dt-for-summary.csv")
+# write_csv(annual_dt, "2025-data/annual-trophic-dt-for-summary.csv")
