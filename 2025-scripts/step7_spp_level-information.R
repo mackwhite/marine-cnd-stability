@@ -132,3 +132,30 @@ filled_data <- spp_fill |>
 
 lw <- growth_params(ests$scientific_name)
 
+lw_distinct <- lw |> 
+      rename(scientific_name = species) |> 
+      group_by(scientific_name) |> 
+      summarize(across(where(is.numeric), ~mean(., na.rm = TRUE))) |> 
+      mutate(across(where(is.numeric), 
+                    ~ifelse(is.nan(.), NA, .)))
+
+spp_fill_test <- spp_fill |> 
+      mutate(temp = 28.0)
+
+library(dplyr)
+library(purrr)
+library(fishflux)  # Assuming this is the correct package
+
+results <- spp_fill_test |> 
+      filter(!is.na(family)) |> 
+      mutate(
+            metabolism_result = pmap(
+                  list(family = family, temp = temp, troph_m = troph, troph_sd = 1e-10),
+                  fishflux::metabolism
+            )
+      ) |> 
+      unnest_wider(metabolism_result)
+
+# View the results
+head(results)
+
