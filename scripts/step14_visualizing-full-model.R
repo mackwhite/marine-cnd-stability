@@ -146,8 +146,7 @@ df_eq = bind_rows(re_beta, fe_beta) |>
       select(term, Program, value) |> 
       pivot_wider(names_from = term, values_from = value) |> 
       # pivot_longer(mean_species_diversity:synch, names_to = 'term', values_to = 'beta')
-      pivot_longer(beta_time:synch, names_to = 'term', values_to = 'beta')
-
+      pivot_longer(mean_species_diversity:synch, names_to = 'term', values_to = 'beta')
 
 
 # load and get min and max values
@@ -216,14 +215,15 @@ df = dat_scaled |>
 a = ggplot(df|> filter(Program != 'Overall'), aes(value, stab, color = Program))+
       geom_line(linewidth = 1.75)+
       scale_color_manual(values = program_palette)+
+      # facet_wrap(~term, nrow = 1, strip.position = 'right', scales = 'free')+
       facet_wrap(~term, ncol = 1, strip.position = 'right', scales = 'free')+
       labs(y = 'CND Stability', x = NULL)+
       theme_classic()+
       theme(axis.text = element_blank(),
             axis.ticks = element_blank(),
-            axis.title.x = element_text(face = "bold", color = "black", size = 14),
+            axis.title.x = element_text(face = "bold", color = "black", size = 12),
             # axis.title.x = element_blank(),
-            axis.title.y = element_text(face = "bold", color = "black", size = 14),
+            axis.title.y = element_text(face = "bold", color = "black", size = 12),
             #strip.text = element_text(face = "bold", color = "black", size = 12),
             strip.text = element_blank(),
             strip.background = element_blank(),
@@ -235,7 +235,7 @@ a = ggplot(df|> filter(Program != 'Overall'), aes(value, stab, color = Program))
 
 # betas 
 b = ggplot(df_beta|> filter(Program != 'Overall'), aes(Program, value, color = Program))+
-      geom_hline(aes(yintercept = 0), size = 1)+
+      geom_hline(aes(yintercept = 0), linetype = "dashed", linewidth = 0.75) +
       #geom_pointrange(aes(ymin = lower_5, ymax = upper_95), linewidth = 1.25)+
       geom_pointrange(aes(ymin = lower_10, ymax = upper_90), linewidth = 2)+
       # geom_pointrange(aes(ymin = lower_25, ymax = upper_75), linewidth = 2)+
@@ -243,14 +243,15 @@ b = ggplot(df_beta|> filter(Program != 'Overall'), aes(Program, value, color = P
       labs(y = 'Beta', x = NULL)+
       scale_color_manual(values = program_palette)+
       coord_flip()+
+      # facet_wrap(~term, nrow = 1, strip.position = 'top')+
       facet_wrap(~term, ncol = 1, strip.position = 'right')+
       theme_classic()+
-      theme(axis.text.x = element_text(face = "bold", color = "black", size = 12),
-            axis.text.y = element_text(face = "bold", color = "black", size = 12),
-            axis.title.x = element_text(face = "bold", color = "black", size = 14),
+      theme(axis.text.x = element_text(face = "bold", color = "black", size = 10),
+            axis.text.y = element_text(face = "bold", color = "black", size = 10),
+            axis.title.x = element_text(face = "bold", color = "black", size = 12),
             # axis.title.x = element_blank(),
-            axis.title.y = element_text(face = "bold", color = "black", size = 14),
-            strip.text = element_text(face = "bold", color = "black", size = 12),
+            axis.title.y = element_text(face = "bold", color = "black", size = 12),
+            strip.text = element_text(face = "bold", color = "black", size = 10),
             # axis.title.y = element_blank(),
             legend.position = "none",
             legend.background = element_blank(),
@@ -258,15 +259,15 @@ b = ggplot(df_beta|> filter(Program != 'Overall'), aes(Program, value, color = P
             legend.text = element_text(face = "bold", color = "black", size = 12),
             legend.title = element_text(face = "bold", color = "black", size = 14))
 
-ggpubr::ggarrange(a,b, align = 'h', common.legend = T, legend = 'bottom')
+# ggpubr::ggarrange(b,a, nrow=2, ncol=1, align = 'hv', common.legend = T, legend = 'bottom')
 #ggsave('output/figs/fig4.png', dpi = 600, units= 'in', height = 10, width = 6)
 
-plot = ggpubr::ggarrange(a,b, align = 'h', legend = 'none')
+plot = ggpubr::ggarrange(a,b,labels = c('a', 'b'), align = 'h', legend = 'none', label.x = -0.01)
 
 f4 = annotate_figure(plot, 
                      top = text_grob(
                            bquote({R^2}[cond] == 0.67 ~ "," ~ {R^2}[mar] == 0.18),
                            #expression("R"^2*[cond] *"= 0.62," ~ "R"^2 * [mar]* "= 0.19"),
-                           size = 16, face = 'bold'))
+                           size = 14, face = 'bold'))
 
-ggsave('output/figs/fig5.png', plot = f4, dpi = 600, units= 'in', height = 9.5, width = 6)
+ggsave('output/figs/fig4_rev.png', plot = f4, dpi = 600, units= 'in', height = 7.5, width = 5.75)

@@ -334,7 +334,7 @@ syn = ggpubr::ggarrange(a,b, align = 'h', legend = 'none')
 
 ggarrange(sr, syn, labels = c('a)', 'b)'), align = 'v', nrow =2)
 
-# ggsave('output/figs/fig4.png', dpi = 600, units= 'in', height = 6, width = 6)
+ggsave('output/figs/fig3_rev.png', dpi = 600, units= 'in', height = 6, width = 6)
 
 # removing overall average ----
 # species richness 
@@ -579,11 +579,11 @@ a = ggplot(df |> filter(Program != 'Overall'), aes(value, stab, color = Program)
       #facet_wrap(~term, ncol = 1, strip.position = 'right', scales = 'free')+
       labs(y = 'CND Stability', x = 'Species Synchrony')+
       theme_classic()+
-      theme(axis.text.x = element_text(face = "bold", color = "black", size = 12),
-            axis.text.y = element_text(face = "bold", color = "black", size = 12),
-            axis.title.x = element_text(face = "bold", color = "black", size = 14),
+      theme(axis.text.x = element_text(face = "bold", color = "black", size = 10),
+            axis.text.y = element_text(face = "bold", color = "black", size = 10),
+            axis.title.x = element_text(face = "bold", color = "black", size = 12),
             # axis.title.x = element_blank(),
-            axis.title.y = element_text(face = "bold", color = "black", size = 14),
+            axis.title.y = element_text(face = "bold", color = "black", size = 12),
             #strip.text = element_text(face = "bold", color = "black", size = 12),
             strip.text = element_blank(),
             strip.background = element_blank(),
@@ -595,25 +595,25 @@ a = ggplot(df |> filter(Program != 'Overall'), aes(value, stab, color = Program)
 
 # betas 
 b = ggplot(df_beta|> filter(Program != 'Overall'), aes(Program, value, color = Program))+
-      geom_hline(aes(yintercept = 0), linewidth = 1)+
+      geom_hline(aes(yintercept = 0), linetype = "dashed", linewidth = 0.75) +
       #geom_pointrange(aes(ymin = lower_5, ymax = upper_95), linewidth = 1.25)+
       geom_pointrange(aes(ymin = lower_10, ymax = upper_90), linewidth = 2)+
       # geom_pointrange(aes(ymin = lower_25, ymax = upper_75), linewidth = 2)+
       geom_pointrange(aes(ymin = lower_2.5, ymax = upper_97.5), linewidth = 1, size = .9)+
       labs(y = 'Beta', x = NULL)+
       scale_color_manual(values = program_palette)+
-      annotate('text', x = 2, y = -0.8, size = 4.5,
+      annotate('text', x = 2, y = -0.8, size = 3.5,
                label = bquote(atop(
                      {R^2}[cond] ~ '= 0.61',
                      {R^2}[mar] ~ '= 0.10 ')))+
       coord_flip()+
       #facet_wrap(~term, ncol = 1, strip.position = 'right')+
       theme_classic()+
-      theme(axis.text.x = element_text(face = "bold", color = "black", size = 12),
-            axis.text.y = element_text(face = "bold", color = "black", size = 12),
-            axis.title.x = element_text(face = "bold", color = "black", size = 14),
+      theme(axis.text.x = element_text(face = "bold", color = "black", size = 10),
+            axis.text.y = element_text(face = "bold", color = "black", size = 10),
+            axis.title.x = element_text(face = "bold", color = "black", size = 12),
             # axis.title.x = element_blank(),
-            axis.title.y = element_text(face = "bold", color = "black", size = 14),
+            axis.title.y = element_text(face = "bold", color = "black", size = 12),
             strip.text = element_text(face = "bold", color = "black", size = 12),
             # axis.title.y = element_blank(),
             legend.position = "none",
@@ -622,9 +622,8 @@ b = ggplot(df_beta|> filter(Program != 'Overall'), aes(Program, value, color = P
             legend.text = element_text(face = "bold", color = "black", size = 12),
             legend.title = element_text(face = "bold", color = "black", size = 14))
 
-syn = ggpubr::ggarrange(a,b, align = 'h', legend = 'none')
-
+syn = ggpubr::ggarrange(a,b, labels = c('a', 'b'), align = 'h', legend = 'none')
 
 ggarrange(sr, syn, labels = c('a)', 'b)'), align = 'v', nrow =2)
 
-ggsave('output/figs/fig4_noavg.png', dpi = 600, units= 'in', height = 6, width = 6.5)
+ggsave('output/figs/fig3_rev_noavg.png', dpi = 600, units= 'in', height = 3, width = 5)
