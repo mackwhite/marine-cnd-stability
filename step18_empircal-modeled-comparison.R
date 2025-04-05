@@ -255,3 +255,31 @@ model_validation |>
 ggsave("output/figs/supplemental-model-validation.png", units = "in", width = 6,
        height = 5, dpi =  600)
 
+# straight up correlation with all points ---------------------------------
+
+kelp4 |> 
+      ggplot(aes(x = n10_mod, y = n10_emp)) +
+      geom_point(size = 2) +
+      geom_smooth(method = lm, color = "#003153", fill = "#003153") +
+      annotate('text', 
+               x = 1.45, y = 5.2,
+               label = bquote({R^2} == 0.76),
+               size = 6) +
+      annotate('text', 
+               x = 1.57, y = 4.95,
+               label = bquote(italic(p) < 2 %*% 10^-16),
+               size = 6) +
+      theme_classic() +
+      scale_y_continuous(breaks = c(1,2,3,4,5), limits = c(1.13,5.233)) +
+      scale_x_continuous(breaks = c(1,2,3,4,5), limits = c(1.13,5.233)) +
+      ylab(expression(bold("Empirical Log" [10] * " N Excretion (" * mu * "g" %.% ind^-1 %.% hr^-1 * ")"))) +
+      xlab(expression(bold("Modeled Log" [10] * " N Excretion (" * mu * "g" %.% ind^-1 %.% hr^-1 * ")"))) +
+      theme(axis.text.x = element_text(face = "bold", color = "black", size = 14),
+            axis.text.y = element_text(face = "bold", color = "black", size = 14),
+            axis.title.x = element_text(face = "bold", color = "black", size = 14),
+            axis.title.y = element_text(face = "bold", color = "black", size = 14),
+            legend.position = "none",
+            legend.text = element_text(face = "bold", color = "black"),
+            legend.title = element_text(face = "bold", color = "black"))
+ggsave("output/figs/supplemental-model-validation.png", units = "in", width = 6,
+       height = 5, dpi =  600)
